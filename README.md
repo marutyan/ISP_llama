@@ -1,4 +1,4 @@
-# no11: Voice Recognition & AI Response Desktop App
+# Voice Recognition & AI Response Desktop App
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Kotlin-blue)
 ![License](https://img.shields.io/badge/license-Education-lightgrey)
