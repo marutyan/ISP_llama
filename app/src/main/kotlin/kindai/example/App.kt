@@ -25,8 +25,8 @@ object VoiceDetector {
     private var listenerThread: Thread? = null
     
     // 音声検出の閾値設定
-    private val SILENCE_THRESHOLD = 500.0  // 音声検出の閾値
-    private val SILENCE_DURATION = 1000    // 無音が続く時間(ms)
+    private val SILENCE_THRESHOLD = 200.0  // 音声検出の閾値
+    private val SILENCE_DURATION = 200    // 無音が続く時間(ms)
     private val MIN_RECORDING_DURATION = 500 // 最小録音時間(ms)
     
     fun startListening(
