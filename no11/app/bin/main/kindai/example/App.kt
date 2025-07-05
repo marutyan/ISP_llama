@@ -156,14 +156,78 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         horizontalAlignment = SwingConstants.CENTER
     }
     
+    // モデル選択ラジオボタン
+    private val gemma2Radio = JRadioButton("Gemma2 (テキストのみ)", true)
+    private val gemma3Radio = JRadioButton("Gemma3 (マルチモーダル)")
+    private val modelGroup = ButtonGroup().apply {
+        add(gemma2Radio)
+        add(gemma3Radio)
+    }
+    
+    // カスタムプロンプト入力
+    private val promptField = JTextField("日本語で答えてください。").apply {
+        font = Font(Font.SANS_SERIF, Font.PLAIN, 12)
+    }
+    
+    // 画像選択ボタン（Gemma3用）
+    private val imageButton = JButton("画像を選択").apply {
+        isEnabled = false
+        addActionListener { selectImage() }
+    }
+    private var selectedImageFile: java.io.File? = null
+    
     private val isProcessing = AtomicBoolean(false)
     private val dateFormat = SimpleDateFormat("yyyyMMddHHmmssSSS")
 
     init {
         defaultCloseOperation = EXIT_ON_CLOSE
-        preferredSize = Dimension(800, 600)
+        preferredSize = Dimension(900, 700)
+
+        // モデル選択パネル
+        val modelPanel = JPanel().apply {
+            border = BorderFactory.createTitledBorder("AIモデル選択")
+            add(gemma2Radio)
+            add(gemma3Radio)
+        }
+        
+        // プロンプト入力パネル
+        val promptPanel = JPanel(BorderLayout()).apply {
+            border = BorderFactory.createTitledBorder("カスタムプロンプト")
+            add(JLabel("追加指示: "), BorderLayout.WEST)
+            add(promptField, BorderLayout.CENTER)
+        }
+        
+        // 画像選択パネル（Gemma3用）
+        val imagePanel = JPanel().apply {
+            border = BorderFactory.createTitledBorder("画像入力 (Gemma3のみ)")
+            add(imageButton)
+        }
+        
+        // 設定パネル（上部）
+        val settingsPanel = JPanel(BorderLayout()).apply {
+            add(modelPanel, BorderLayout.NORTH)
+            add(promptPanel, BorderLayout.CENTER)
+            add(imagePanel, BorderLayout.SOUTH)
+        }
+        
+        // モデル選択時の処理
+        gemma3Radio.addActionListener {
+            imageButton.isEnabled = gemma3Radio.isSelected
+            if (!gemma3Radio.isSelected) {
+                selectedImageFile = null
+                imageButton.text = "画像を選択"
+            }
+        }
+        gemma2Radio.addActionListener {
+            imageButton.isEnabled = gemma3Radio.isSelected
+            if (!gemma3Radio.isSelected) {
+                selectedImageFile = null
+                imageButton.text = "画像を選択"
+            }
+        }
 
         // GUI レイアウト
+        add(settingsPanel, BorderLayout.NORTH)
         add(JScrollPane(resultArea), BorderLayout.CENTER)
         add(statusLabel, BorderLayout.SOUTH)
         
@@ -172,6 +236,20 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         
         // アプリ起動時に音声検出開始
         startVoiceDetection()
+    }
+    
+    private fun selectImage() {
+        val fileChooser = JFileChooser().apply {
+            fileSelectionMode = JFileChooser.FILES_ONLY
+            fileFilter = javax.swing.filechooser.FileNameExtensionFilter(
+                "画像ファイル", "jpg", "jpeg", "png", "gif", "bmp"
+            )
+        }
+        
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            selectedImageFile = fileChooser.selectedFile
+            imageButton.text = "選択済み: ${selectedImageFile!!.name}"
+        }
     }
 
     private fun startVoiceDetection() {
@@ -212,13 +290,20 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                     // 音声認識実行
                     val transcription = postToDjango(wavFile)
                     
-                    // Ollama APIに送信
-                    val aiResponse = askOllama(transcription)
+                    // 選択されたモデルとカスタムプロンプトでAI応答取得
+                    val selectedModel = if (gemma2Radio.isSelected) "gemma2" else "gemma3"
+                    val customPrompt = promptField.text
+                    val aiResponse = askOllama(transcription, selectedModel, customPrompt, selectedImageFile)
                     
                     // GUI更新
                     SwingUtilities.invokeLater {
                         resultArea.append("--- 新しい音声セグメント ---\n")
+                        resultArea.append("使用モデル: $selectedModel\n")
                         resultArea.append("認識結果: $transcription\n")
+                        if (selectedImageFile != null) {
+                            resultArea.append("画像: ${selectedImageFile!!.name}\n")
+                        }
+                        resultArea.append("カスタムプロンプト: $customPrompt\n")
                         resultArea.append("Ollama応答: $aiResponse\n\n")
                         resultArea.caretPosition = resultArea.document.length
                         
@@ -307,13 +392,32 @@ except Exception as e:
         }
     }
 
-    private fun askOllama(prompt: String): String {
+    private fun askOllama(prompt: String, model: String, customPrompt: String, imageFile: java.io.File?): String {
         return try {
-            val promptForOllama = "${prompt}。日本語で答えてください。"
-            val json = """
-                {"model":"gemma2","prompt":"${promptForOllama.replace("\"","\\\"")}",
+            val fullPrompt = if (customPrompt.isNotEmpty()) {
+                "${prompt}。${customPrompt}"
+            } else {
+                "${prompt}。日本語で答えてください。"
+            }
+            
+            // Gemma3でマルチモーダル対応
+            val json = if (model == "gemma3" && imageFile != null) {
+                // 画像をBase64エンコード
+                val imageBytes = imageFile.readBytes()
+                val imageBase64 = java.util.Base64.getEncoder().encodeToString(imageBytes)
+                
+                """
+                {"model":"$model","prompt":"${fullPrompt.replace("\"","\\\"")}",
+                 "images":["$imageBase64"],
                  "stream":false}
-            """.trimIndent()
+                """.trimIndent()
+            } else {
+                """
+                {"model":"$model","prompt":"${fullPrompt.replace("\"","\\\"")}",
+                 "stream":false}
+                """.trimIndent()
+            }
+            
             val req = Request.Builder().url("http://localhost:11434/api/generate")
                 .post(json.toRequestBody("application/json".toMediaTypeOrNull()))
                 .build()
