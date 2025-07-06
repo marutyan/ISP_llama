@@ -175,6 +175,16 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         addActionListener { selectImage() }
     }
     private var selectedImageFile: java.io.File? = null
+    private val imagePreviewLabel = JLabel("画像なし").apply {
+        preferredSize = Dimension(100, 100)
+        border = BorderFactory.createLoweredBevelBorder()
+        horizontalAlignment = SwingConstants.CENTER
+    }
+    
+    // モデル状態チェック
+    private val modelStatusLabel = JLabel("モデル状態確認中...").apply {
+        font = Font(Font.SANS_SERIF, Font.ITALIC, 10)
+    }
     
     private val isProcessing = AtomicBoolean(false)
     private val dateFormat = SimpleDateFormat("yyyyMMddHHmmssSSS")
@@ -198,16 +208,29 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         }
         
         // 画像選択パネル（Gemma3用）
-        val imagePanel = JPanel().apply {
+        val imagePanel = JPanel(BorderLayout()).apply {
             border = BorderFactory.createTitledBorder("画像入力 (Gemma3のみ)")
-            add(imageButton)
+            val buttonPanel = JPanel().apply {
+                add(imageButton)
+            }
+            add(buttonPanel, BorderLayout.NORTH)
+            add(imagePreviewLabel, BorderLayout.CENTER)
+        }
+        
+        // モデル状態パネル
+        val statusPanel = JPanel().apply {
+            add(modelStatusLabel)
         }
         
         // 設定パネル（上部）
         val settingsPanel = JPanel(BorderLayout()).apply {
             add(modelPanel, BorderLayout.NORTH)
             add(promptPanel, BorderLayout.CENTER)
-            add(imagePanel, BorderLayout.SOUTH)
+            val bottomPanel = JPanel(BorderLayout()).apply {
+                add(imagePanel, BorderLayout.CENTER)
+                add(statusPanel, BorderLayout.SOUTH)
+            }
+            add(bottomPanel, BorderLayout.SOUTH)
         }
         
         // モデル選択時の処理
@@ -234,10 +257,57 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         pack()
         setLocationRelativeTo(null)
         
+        // モデル状態チェック
+        checkModelAvailability()
+        
         // アプリ起動時に音声検出開始
         startVoiceDetection()
     }
     
+    private fun checkModelAvailability() {
+        thread {
+            try {
+                // Gemma2の確認
+                val gemma2Available = checkModelStatus("gemma2")
+                // Gemma3の確認
+                val gemma3Available = checkModelStatus("gemma3")
+                
+                SwingUtilities.invokeLater {
+                    val status = mutableListOf<String>()
+                    if (gemma2Available) status.add("Gemma2: ✓")
+                    else status.add("Gemma2: ✗")
+                    
+                    if (gemma3Available) status.add("Gemma3: ✓")
+                    else status.add("Gemma3: ✗")
+                    
+                    modelStatusLabel.text = status.joinToString(" | ")
+                    
+                    // 利用できないモデルは無効化
+                    if (!gemma2Available) gemma2Radio.isEnabled = false
+                    if (!gemma3Available) gemma3Radio.isEnabled = false
+                }
+            } catch (e: Exception) {
+                SwingUtilities.invokeLater {
+                    modelStatusLabel.text = "モデル状態確認エラー: ${e.message}"
+                }
+            }
+        }
+    }
+    
+    private fun checkModelStatus(modelName: String): Boolean {
+        return try {
+            val json = """{"model":"$modelName","prompt":"test","stream":false}"""
+            val req = Request.Builder().url("http://localhost:11434/api/generate")
+                .post(json.toRequestBody("application/json".toMediaTypeOrNull()))
+                .build()
+            Http.cli.newCall(req).execute().use { res ->
+                res.isSuccessful
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun selectImage() {
         val fileChooser = JFileChooser().apply {
             fileSelectionMode = JFileChooser.FILES_ONLY
@@ -249,6 +319,30 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             selectedImageFile = fileChooser.selectedFile
             imageButton.text = "選択済み: ${selectedImageFile!!.name}"
+            
+            // 画像が選択されたらプレビューを更新
+            if (selectedImageFile!!.exists()) {
+                try {
+                    val originalIcon = ImageIcon(selectedImageFile!!.toURI().toURL())
+                    val originalImage = originalIcon.image
+                    
+                    // プレビューサイズに合わせてリサイズ
+                    val previewWidth = 100
+                    val previewHeight = 100
+                    val scaledImage = originalImage.getScaledInstance(
+                        previewWidth, previewHeight, java.awt.Image.SCALE_SMOOTH
+                    )
+                    
+                    imagePreviewLabel.icon = ImageIcon(scaledImage)
+                    imagePreviewLabel.text = "" // テキストをクリア
+                } catch (e: Exception) {
+                    imagePreviewLabel.icon = null
+                    imagePreviewLabel.text = "プレビューエラー"
+                }
+            } else {
+                imagePreviewLabel.icon = null
+                imagePreviewLabel.text = "ファイルが見つかりません"
+            }
         }
     }
 
