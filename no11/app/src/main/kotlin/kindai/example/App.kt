@@ -174,11 +174,28 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         isEnabled = false
         addActionListener { selectImage() }
     }
+    private val imageClearButton = JButton("クリア").apply {
+        isEnabled = false
+        addActionListener { clearImage() }
+    }
     private var selectedImageFile: java.io.File? = null
     private val imagePreviewLabel = JLabel("画像なし").apply {
         preferredSize = Dimension(100, 100)
         border = BorderFactory.createLoweredBevelBorder()
         horizontalAlignment = SwingConstants.CENTER
+    }
+    
+    // プロンプトプリセット
+    private val promptPresets = arrayOf(
+        "日本語で答えてください。",
+        "詳しく説明してください。日本語で。",
+        "簡潔に答えてください。日本語で。",
+        "この画像について詳しく教えてください。日本語で。",
+        "専門的な観点から分析してください。日本語で。"
+    )
+    private val promptComboBox = JComboBox(promptPresets).apply {
+        isEditable = true
+        selectedIndex = 0
     }
     
     // モデル状態チェック
@@ -203,8 +220,8 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         // プロンプト入力パネル
         val promptPanel = JPanel(BorderLayout()).apply {
             border = BorderFactory.createTitledBorder("カスタムプロンプト")
-            add(JLabel("追加指示: "), BorderLayout.WEST)
-            add(promptField, BorderLayout.CENTER)
+            add(JLabel("プリセット/カスタム: "), BorderLayout.WEST)
+            add(promptComboBox, BorderLayout.CENTER)
         }
         
         // 画像選択パネル（Gemma3用）
@@ -212,6 +229,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
             border = BorderFactory.createTitledBorder("画像入力 (Gemma3のみ)")
             val buttonPanel = JPanel().apply {
                 add(imageButton)
+                add(imageClearButton)
             }
             add(buttonPanel, BorderLayout.NORTH)
             add(imagePreviewLabel, BorderLayout.CENTER)
@@ -235,17 +253,19 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         
         // モデル選択時の処理
         gemma3Radio.addActionListener {
-            imageButton.isEnabled = gemma3Radio.isSelected
-            if (!gemma3Radio.isSelected) {
-                selectedImageFile = null
-                imageButton.text = "画像を選択"
+            val isGemma3 = gemma3Radio.isSelected
+            imageButton.isEnabled = isGemma3
+            imageClearButton.isEnabled = isGemma3 && selectedImageFile != null
+            if (!isGemma3) {
+                clearImage()
             }
         }
         gemma2Radio.addActionListener {
-            imageButton.isEnabled = gemma3Radio.isSelected
-            if (!gemma3Radio.isSelected) {
-                selectedImageFile = null
-                imageButton.text = "画像を選択"
+            val isGemma3 = gemma3Radio.isSelected
+            imageButton.isEnabled = isGemma3
+            imageClearButton.isEnabled = isGemma3 && selectedImageFile != null
+            if (!isGemma3) {
+                clearImage()
             }
         }
 
@@ -319,6 +339,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             selectedImageFile = fileChooser.selectedFile
             imageButton.text = "選択済み: ${selectedImageFile!!.name}"
+            imageClearButton.isEnabled = true
             
             // 画像が選択されたらプレビューを更新
             if (selectedImageFile!!.exists()) {
@@ -344,6 +365,14 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                 imagePreviewLabel.text = "ファイルが見つかりません"
             }
         }
+    }
+
+    private fun clearImage() {
+        selectedImageFile = null
+        imageButton.text = "画像を選択"
+        imageClearButton.isEnabled = false
+        imagePreviewLabel.icon = null
+        imagePreviewLabel.text = "画像なし"
     }
 
     private fun startVoiceDetection() {
@@ -386,7 +415,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                     
                     // 選択されたモデルとカスタムプロンプトでAI応答取得
                     val selectedModel = if (gemma2Radio.isSelected) "gemma2" else "gemma3"
-                    val customPrompt = promptField.text
+                    val customPrompt = promptComboBox.selectedItem as String
                     val aiResponse = askOllama(transcription, selectedModel, customPrompt, selectedImageFile)
                     
                     // GUI更新
