@@ -134,9 +134,9 @@ object VoiceDetector {
 /* ─────────────────────── 共通 HTTP ─────────────────────── */
 object Http {
     val cli = okhttp3.OkHttpClient.Builder()
-        .callTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
         .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
         .build()
     val map = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
 }
