@@ -157,11 +157,13 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
     }
     
     // モデル選択ラジオボタン
-    private val gemma2Radio = JRadioButton("Gemma2 (テキストのみ)", true)
-    private val gemma3Radio = JRadioButton("Gemma3 (マルチモーダル)")
+    private val gemma2Radio = JRadioButton("Gemma2 (9B - 高性能)")
+    private val gemma3Radio = JRadioButton("Gemma3 (4B - マルチモーダル)")
+    private val gemma3LightRadio = JRadioButton("Gemma3:1B (軽量版)", true) // デフォルト選択
     private val modelGroup = ButtonGroup().apply {
         add(gemma2Radio)
         add(gemma3Radio)
+        add(gemma3LightRadio)
     }
     
     // カスタムプロンプト入力
@@ -185,13 +187,13 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         horizontalAlignment = SwingConstants.CENTER
     }
     
-    // プロンプトプリセット
+    // プロンプトプリセット（軽量版向けに最適化）
     private val promptPresets = arrayOf(
         "日本語で答えてください。",
-        "詳しく説明してください。日本語で。",
-        "簡潔に答えてください。日本語で。",
-        "この画像について詳しく教えてください。日本語で。",
-        "専門的な観点から分析してください。日本語で。"
+        "簡潔に答えてください。日本語で。", // 軽量版向け
+        "短く説明してください。日本語で。", // 軽量版向け
+        "この画像について教えてください。日本語で。",
+        "詳しく説明してください。日本語で。"
     )
     private val promptComboBox = JComboBox(promptPresets).apply {
         isEditable = true
@@ -215,6 +217,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
             border = BorderFactory.createTitledBorder("AIモデル選択")
             add(gemma2Radio)
             add(gemma3Radio)
+            add(gemma3LightRadio)
         }
         
         // プロンプト入力パネル
@@ -268,6 +271,14 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                 clearImage()
             }
         }
+        gemma3LightRadio.addActionListener {
+            val isGemma3Light = gemma3LightRadio.isSelected
+            imageButton.isEnabled = isGemma3Light
+            imageClearButton.isEnabled = isGemma3Light && selectedImageFile != null
+            if (!isGemma3Light) {
+                clearImage()
+            }
+        }
 
         // GUI レイアウト
         add(settingsPanel, BorderLayout.NORTH)
@@ -291,6 +302,8 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                 val gemma2Available = checkModelStatus("gemma2")
                 // Gemma3の確認
                 val gemma3Available = checkModelStatus("gemma3")
+                // Gemma3:1B (軽量版)の確認
+                val gemma3LightAvailable = checkModelStatus("gemma3_light")
                 
                 SwingUtilities.invokeLater {
                     val status = mutableListOf<String>()
@@ -299,12 +312,16 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                     
                     if (gemma3Available) status.add("Gemma3: ✓")
                     else status.add("Gemma3: ✗")
+
+                    if (gemma3LightAvailable) status.add("Gemma3:1B (軽量版): ✓")
+                    else status.add("Gemma3:1B (軽量版): ✗")
                     
                     modelStatusLabel.text = status.joinToString(" | ")
                     
                     // 利用できないモデルは無効化
                     if (!gemma2Available) gemma2Radio.isEnabled = false
                     if (!gemma3Available) gemma3Radio.isEnabled = false
+                    if (!gemma3LightAvailable) gemma3LightRadio.isEnabled = false
                 }
             } catch (e: Exception) {
                 SwingUtilities.invokeLater {
@@ -316,7 +333,13 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
     
     private fun checkModelStatus(modelName: String): Boolean {
         return try {
-            val json = """{"model":"$modelName","prompt":"test","stream":false}"""
+            // モデル名を正しく変換
+            val actualModelName = when (modelName) {
+                "gemma3_light" -> "gemma3:1b"
+                else -> modelName
+            }
+            
+            val json = """{"model":"$actualModelName","prompt":"test","stream":false}"""
             val req = Request.Builder().url("http://localhost:11434/api/generate")
                 .post(json.toRequestBody("application/json".toMediaTypeOrNull()))
                 .build()
@@ -414,7 +437,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                     val transcription = postToDjango(wavFile)
                     
                     // 選択されたモデルとカスタムプロンプトでAI応答取得
-                    val selectedModel = if (gemma2Radio.isSelected) "gemma2" else "gemma3"
+                    val selectedModel = if (gemma2Radio.isSelected) "gemma2" else if (gemma3Radio.isSelected) "gemma3" else "gemma3_light"
                     val customPrompt = promptComboBox.selectedItem as String
                     val aiResponse = askOllama(transcription, selectedModel, customPrompt, selectedImageFile)
                     
@@ -523,20 +546,26 @@ except Exception as e:
                 "${prompt}。日本語で答えてください。"
             }
             
-            // Gemma3でマルチモーダル対応
-            val json = if (model == "gemma3" && imageFile != null) {
+            // モデル名を正しく変換
+            val actualModel = when (model) {
+                "gemma3_light" -> "gemma3:1b"
+                else -> model
+            }
+            
+            // Gemma3（標準・軽量版）でマルチモーダル対応
+            val json = if ((model == "gemma3" || model == "gemma3_light") && imageFile != null) {
                 // 画像をBase64エンコード
                 val imageBytes = imageFile.readBytes()
                 val imageBase64 = java.util.Base64.getEncoder().encodeToString(imageBytes)
                 
                 """
-                {"model":"$model","prompt":"${fullPrompt.replace("\"","\\\"")}",
+                {"model":"$actualModel","prompt":"${fullPrompt.replace("\"","\\\"")}",
                  "images":["$imageBase64"],
                  "stream":false}
                 """.trimIndent()
             } else {
                 """
-                {"model":"$model","prompt":"${fullPrompt.replace("\"","\\\"")}",
+                {"model":"$actualModel","prompt":"${fullPrompt.replace("\"","\\\"")}",
                  "stream":false}
                 """.trimIndent()
             }
