@@ -19,12 +19,20 @@ no11 is an advanced desktop application that continuously listens to your microp
 ## 🆕 New Features (v2.0)
 
 ### 🔄 Model Selection
-- **Gemma2**: High-performance text-only model
-- **Gemma3**: Cutting-edge multimodal model with image understanding
+- **Gemma2 (9B)**: High-performance text-only model
+- **Gemma3 (4B)**: Cutting-edge multimodal model with image understanding
+- **Gemma3:1B (815MB)**: 🆕 **Lightweight version - Default choice!**
 - Real-time model availability checking
 - Automatic model validation via Ollama API
 
-### 🖼️ Multimodal Support (Gemma3)
+### ⚡ Performance Comparison
+| Model | Size | Speed | Features | Best For |
+|-------|------|-------|----------|----------|
+| **Gemma3:1B** | 815MB | ⚡⚡⚡ Very Fast | Text + Images | **Daily use, fast responses** |
+| Gemma3 (4B) | 3.3GB | ⚡⚡ Fast | Text + Images | Complex multimodal tasks |
+| Gemma2 (9B) | 5.4GB | ⚡ Moderate | Text only | High-quality text generation |
+
+### 🖼️ Multimodal Support (All Gemma3 variants)
 - **Image Upload**: Select and preview images
 - **Visual Analysis**: AI can analyze and describe images
 - **Combined Prompts**: Voice + image + custom text prompts
