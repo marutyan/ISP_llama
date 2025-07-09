@@ -453,14 +453,26 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                     
                     // GUI更新
                     SwingUtilities.invokeLater {
-                        resultArea.append("--- 新しい音声セグメント ---\n")
-                        resultArea.append("使用モデル: $selectedModel\n")
+                        resultArea.append("---新しい音声セグメント---\n")
                         resultArea.append("認識結果: $transcription\n")
+                        
+                        // モデル情報を詳細表示
+                        val modelInfo = when (selectedModel) {
+                            "gemma2" -> "Gemma2 (9.2B parameters - 高品質テキスト生成)"
+                            "gemma3" -> "Gemma3 (4.3B parameters - マルチモーダル対応)"
+                            "gemma3_light" -> "⚡ Gemma3:1B (815MB - 軽量・高速)"
+                            else -> selectedModel
+                        }
+                        resultArea.append("使用モデル: $modelInfo\n")
+                        
                         if (selectedImageFile != null) {
                             resultArea.append("画像: ${selectedImageFile!!.name}\n")
                         }
-                        resultArea.append("カスタムプロンプト: $customPrompt\n")
-                        resultArea.append("Ollama応答: $aiResponse\n\n")
+                        if (customPrompt.isNotEmpty() && customPrompt != "日本語で答えてください。") {
+                            resultArea.append("カスタムプロンプト: $customPrompt\n")
+                        }
+                        resultArea.append("Ollama応答: $aiResponse\n")
+                        resultArea.append("\n")
                         resultArea.caretPosition = resultArea.document.length
                         
                         // 読み上げ中はマイクオフ
