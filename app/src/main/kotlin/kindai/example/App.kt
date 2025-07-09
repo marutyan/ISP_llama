@@ -200,9 +200,8 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         
         statusLabel.text = "音声セグメントを${wavFile.name}に保存しました．DjangoにPOST中..."
         
-        // デバッグ用：録音ファイルの場所を表示
+        // デバッグ用：録音ファイルの場所をコンソールのみに表示
         println("録音ファイル保存場所: ${wavFile.absolutePath}")
-        resultArea.append("録音ファイル: ${wavFile.absolutePath}\n")
         
         object : SwingWorker<Unit, Unit>() {
             override fun doInBackground() {
@@ -271,6 +270,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("audio", wavFile.name,
                 wavFile.asRequestBody("audio/wav".toMediaTypeOrNull()))
+            .addFormDataPart("language", "auto") // 自動言語検出を追加
             .build()
         val req = Request.Builder().url("http://127.0.0.1:8000/api/upload/").post(body).build()
         
@@ -287,7 +287,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
 
     private fun askOllama(prompt: String): String {
         return try {
-            val promptForOllama = "${prompt}。日本語で、余計な説明や英語を含めず、簡潔に答えてください。"
+            val promptForOllama = "${prompt}について、詳しく丁寧に説明してください。日本語で回答し、必要に応じて具体例や背景も含めて教えてください。"
             val json = """
                 {"model":"gemma2","prompt":"${promptForOllama.replace("\"","\\\"")}",
                  "stream":false}
