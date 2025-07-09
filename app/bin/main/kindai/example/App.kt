@@ -26,8 +26,8 @@ object VoiceDetector {
     
     // 音声検出の閾値設定
     private val SILENCE_THRESHOLD = 1000.0  // 音声検出の閾値（適度な感度に調整）
-    private val SILENCE_DURATION = 2000    // 無音が続く時間(ms)（長めに設定）
-    private val MIN_RECORDING_DURATION = 1000 // 最小録音時間(ms)（長めに設定）
+    private val SILENCE_DURATION = 1500    // 無音が続く時間(ms)（少し短めに調整）
+    private val MIN_RECORDING_DURATION = 1500 // 最小録音時間(ms)（1.5秒に延長）
     
     fun startListening(
         onVoiceDetected: () -> Unit,
@@ -200,6 +200,10 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         
         statusLabel.text = "音声セグメントを${wavFile.name}に保存しました．DjangoにPOST中..."
         
+        // デバッグ用：録音ファイルの場所を表示
+        println("録音ファイル保存場所: ${wavFile.absolutePath}")
+        resultArea.append("録音ファイル: ${wavFile.absolutePath}\n")
+        
         object : SwingWorker<Unit, Unit>() {
             override fun doInBackground() {
                 try {
@@ -271,8 +275,13 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         val req = Request.Builder().url("http://127.0.0.1:8000/api/upload/").post(body).build()
         
         return Http.cli.newCall(req).execute().use { res ->
-            if (!res.isSuccessful) throw Exception("音声認識エラー: HTTP ${res.code}")
-            Http.map.readTree(res.body!!.string())["transcription"].asText()
+            if (!res.isSuccessful) {
+                val errorBody = res.body?.string() ?: "不明なエラー"
+                throw Exception("音声認識エラー: HTTP ${res.code} - $errorBody")
+            }
+            val responseBody = res.body!!.string()
+            println("Django API応答: $responseBody") // デバッグ用
+            Http.map.readTree(responseBody)["transcription"].asText()
         }
     }
 
