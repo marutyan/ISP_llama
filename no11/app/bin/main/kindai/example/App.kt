@@ -422,7 +422,17 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         val timestamp = dateFormat.format(Date())
         val wavFile = java.io.File("app/recorded_audio_$timestamp.wav")
         
-        statusLabel.text = "音声セグメントを${wavFile.name}に保存しました．音声認識中..."
+        // 処理中のステータス表示を改善
+        SwingUtilities.invokeLater {
+            val selectedModel = if (gemma2Radio.isSelected) "gemma2" else if (gemma3Radio.isSelected) "gemma3" else "gemma3_light"
+            val modelName = when (selectedModel) {
+                "gemma2" -> "Gemma2 (9B)"
+                "gemma3" -> "Gemma3 (4B)"
+                "gemma3_light" -> "Gemma3:1B (軽量版・高速)"
+                else -> selectedModel
+            }
+            statusLabel.text = "音声セグメントをrecorded_audio_${System.currentTimeMillis()}.wavに保存しました．${modelName}でAI処理中..."
+        }
         
         // デバッグ用：録音ファイルの場所をコンソールのみに表示
         println("録音ファイル保存場所: ${wavFile.absolutePath}")
