@@ -25,9 +25,9 @@ object VoiceDetector {
     private var listenerThread: Thread? = null
     
     // 音声検出の閾値設定
-    private val SILENCE_THRESHOLD = 200.0  // 音声検出の閾値
-    private val SILENCE_DURATION = 200    // 無音が続く時間(ms)
-    private val MIN_RECORDING_DURATION = 500 // 最小録音時間(ms)
+    private val SILENCE_THRESHOLD = 1500.0  // 音声検出の閾値（敏感度を下げる）
+    private val SILENCE_DURATION = 2000    // 無音が続く時間(ms)（長めに設定）
+    private val MIN_RECORDING_DURATION = 1000 // 最小録音時間(ms)（長めに設定）
     
     fun startListening(
         onVoiceDetected: () -> Unit,
@@ -219,19 +219,33 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                         resultArea.append("Ollama応答: $aiResponse\n\n")
                         resultArea.caretPosition = resultArea.document.length
                         
-                        // 読み上げ
-                        Runtime.getRuntime().exec(arrayOf("say", aiResponse))
+                        // 読み上げ中はマイクオフ
+                        statusLabel.text = "読み上げ中..."
+                        
+                        // 読み上げを別スレッドで実行
+                        thread {
+                            try {
+                                val process = Runtime.getRuntime().exec(arrayOf("say", aiResponse))
+                                process.waitFor() // 読み上げ完了まで待機
+                            } catch (e: Exception) {
+                                // 読み上げエラーは無視
+                            }
+                            
+                            // 読み上げ完了後にマイク再開
+                            SwingUtilities.invokeLater {
+                                statusLabel.text = "マイク準備完了．音声待機中....."
+                                isProcessing.set(false)
+                                startVoiceDetection() // 処理完了後にマイクオン
+                            }
+                        }
                     }
                     
                 } catch (e: Exception) {
                     SwingUtilities.invokeLater {
                         showError("処理エラー: ${e.message}")
-                    }
-                } finally {
-                    SwingUtilities.invokeLater {
                         statusLabel.text = "マイク準備完了．音声待機中....."
                         isProcessing.set(false)
-                        startVoiceDetection() // 処理完了後にマイクオン
+                        startVoiceDetection() // エラー時もマイクオン
                     }
                 }
             }
@@ -266,7 +280,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         return try {
             val promptForOllama = "${prompt}。日本語で、余計な説明や英語を含めず、簡潔に答えてください。"
             val json = """
-                {"model":"deepseek-r1:7b","prompt":"${promptForOllama.replace("\"","\\\"")}",
+                {"model":"gemma2","prompt":"${promptForOllama.replace("\"","\\\"")}",
                  "stream":false}
             """.trimIndent()
             val req = Request.Builder().url("http://localhost:11434/api/generate")
