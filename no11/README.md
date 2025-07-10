@@ -28,15 +28,16 @@ no11 is an advanced desktop application that continuously listens to your microp
 ### ⚡ Performance Comparison
 | Model | Size | Speed | Features | Best For |
 |-------|------|-------|----------|----------|
-| **Gemma3:1B** | 815MB | ⚡⚡⚡ Very Fast | Text + Images | **Daily use, fast responses** |
+| **Gemma3:1B** | 815MB | ⚡⚡⚡ Very Fast | **Text Only** | **Daily use, fast responses** |
 | Gemma3 (4B) | 3.3GB | ⚡⚡ Fast | Text + Images | Complex multimodal tasks |
 | Gemma2 (9B) | 5.4GB | ⚡ Moderate | Text only | High-quality text generation |
 
-### 🖼️ Multimodal Support (All Gemma3 variants)
+### 🖼️ Multimodal Support (Gemma3 4B only)
 - **Image Upload**: Select and preview images
-- **Visual Analysis**: AI can analyze and describe images
+- **Visual Analysis**: AI can analyze and describe images  
 - **Combined Prompts**: Voice + image + custom text prompts
 - **Smart Resizing**: Automatic image optimization for AI processing
+- **⚠️ Note**: Gemma3:1B (lightweight) does **not** support image processing
 
 ### 📝 Advanced Prompting
 - **5 Preset Prompts**:

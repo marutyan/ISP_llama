@@ -173,7 +173,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
     
     // 画像選択ボタン（Gemma3用）
     private val imageButton = JButton("画像を選択").apply {
-        isEnabled = false
+        isEnabled = false // 軽量版がデフォルトなので無効
         addActionListener { selectImage() }
     }
     private val imageClearButton = JButton("クリア").apply {
@@ -192,8 +192,8 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         "日本語で答えてください。",
         "簡潔に答えてください。日本語で。", // 軽量版向け
         "短く説明してください。日本語で。", // 軽量版向け
-        "この画像について教えてください。日本語で。",
-        "詳しく説明してください。日本語で。"
+        "詳しく説明してください。日本語で。",
+        "専門的な観点から分析してください。日本語で。"
     )
     private val promptComboBox = JComboBox(promptPresets).apply {
         isEditable = true
@@ -273,9 +273,10 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         }
         gemma3LightRadio.addActionListener {
             val isGemma3Light = gemma3LightRadio.isSelected
-            imageButton.isEnabled = isGemma3Light
-            imageClearButton.isEnabled = isGemma3Light && selectedImageFile != null
-            if (!isGemma3Light) {
+            // 軽量版はマルチモーダル非対応
+            imageButton.isEnabled = false
+            imageClearButton.isEnabled = false
+            if (isGemma3Light) {
                 clearImage()
             }
         }
@@ -574,8 +575,8 @@ except Exception as e:
                 else -> model
             }
             
-            // Gemma3（標準・軽量版）でマルチモーダル対応
-            val json = if ((model == "gemma3" || model == "gemma3_light") && imageFile != null) {
+            // Gemma3（標準版のみ）でマルチモーダル対応
+            val json = if (model == "gemma3" && imageFile != null) {
                 // 画像をBase64エンコード
                 val imageBytes = imageFile.readBytes()
                 val imageBase64 = java.util.Base64.getEncoder().encodeToString(imageBytes)
@@ -585,6 +586,9 @@ except Exception as e:
                  "images":["$imageBase64"],
                  "stream":false}
                 """.trimIndent()
+            } else if (model == "gemma3_light" && imageFile != null) {
+                // 軽量版は画像非対応の警告
+                return "⚠️ Gemma3:1B（軽量版）は画像処理に対応していません。画像を使用する場合は、Gemma3（4B）を選択してください。"
             } else {
                 """
                 {"model":"$actualModel","prompt":"${fullPrompt.replace("\"","\\\"")}",
