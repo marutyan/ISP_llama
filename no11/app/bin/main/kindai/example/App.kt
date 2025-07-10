@@ -157,9 +157,15 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
     }
     
     // モデル選択ラジオボタン
-    private val gemma2Radio = JRadioButton("Gemma2 (9B - 高性能)")
-    private val gemma3Radio = JRadioButton("Gemma3 (4B - マルチモーダル)")
-    private val gemma3LightRadio = JRadioButton("Gemma3:1B (軽量版)", true) // デフォルト選択
+    private val gemma2Radio = JRadioButton("Gemma2 (9B - 高性能)").apply {
+        toolTipText = "高品質テキスト生成 - テキストのみ対応"
+    }
+    private val gemma3Radio = JRadioButton("Gemma3 (4B - マルチモーダル)").apply {
+        toolTipText = "画像＋テキスト処理 - マルチモーダル対応"
+    }
+    private val gemma3LightRadio = JRadioButton("Gemma3:1B (軽量版)", true).apply { // デフォルト選択
+        toolTipText = "高速処理 - テキストのみ対応（画像処理不可）"
+    }
     private val modelGroup = ButtonGroup().apply {
         add(gemma2Radio)
         add(gemma3Radio)
