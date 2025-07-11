@@ -15,6 +15,11 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.awt.Color
+import java.awt.GridBagLayout
+import javax.swing.border.CompoundBorder
+import javax.swing.border.EmptyBorder
+import javax.swing.border.TitledBorder
 
 /* ─────────────────────── 音声検出・録音ユーティリティ ─────────────────────── */
 object VoiceDetector {
@@ -151,20 +156,28 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         isEditable = false
         font = Font(Font.SANS_SERIF, Font.PLAIN, 14)
     }
-    private val statusLabel = JLabel("マイク準備完了．音声待機中.....").apply {
-        font = Font(Font.SANS_SERIF, Font.BOLD, 12)
-        horizontalAlignment = SwingConstants.CENTER
+    // ステータス表示ラベル
+    private val statusLabel = JLabel("🎤 マイク準備完了．音声待機中.....").apply {
+        foreground = Color(76, 175, 80) // 待機中は緑色
+        font = Font("SansSerif", Font.PLAIN, 13)
+        border = EmptyBorder(5, 10, 5, 10)
     }
     
     // モデル選択ラジオボタン
-    private val gemma2Radio = JRadioButton("Gemma2 (9B - 高性能)").apply {
+    private val gemma2Radio = JRadioButton("🏆 Gemma2 (9B - 高性能)").apply {
         toolTipText = "高品質テキスト生成 - テキストのみ対応"
+        font = Font("SansSerif", Font.PLAIN, 13)
+        foreground = Color(33, 33, 33)
     }
-    private val gemma3Radio = JRadioButton("Gemma3 (4B - マルチモーダル)").apply {
+    private val gemma3Radio = JRadioButton("🎨 Gemma3 (4B - マルチモーダル)").apply {
         toolTipText = "画像＋テキスト処理 - マルチモーダル対応"
+        font = Font("SansSerif", Font.PLAIN, 13)
+        foreground = Color(33, 33, 33)
     }
-    private val gemma3LightRadio = JRadioButton("Gemma3:1B (軽量版)", true).apply { // デフォルト選択
+    private val gemma3LightRadio = JRadioButton("⚡ Gemma3:1B (軽量版)", true).apply { // デフォルト選択
         toolTipText = "高速処理 - テキストのみ対応（画像処理不可）"
+        font = Font("SansSerif", Font.PLAIN, 13)
+        foreground = Color(76, 175, 80) // 緑色で高速性をアピール
     }
     private val modelGroup = ButtonGroup().apply {
         add(gemma2Radio)
@@ -178,19 +191,37 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
     }
     
     // 画像選択ボタン（Gemma3用）
-    private val imageButton = JButton("画像を選択").apply {
+    private val imageButton = JButton("📷 画像選択").apply {
         isEnabled = false // 軽量版がデフォルトなので無効
+        font = Font("SansSerif", Font.PLAIN, 13)
+        background = Color(245, 245, 245)
+        foreground = Color(33, 150, 243)
         addActionListener { selectImage() }
     }
-    private val imageClearButton = JButton("クリア").apply {
+    private val imageClearButton = JButton("🗑️ クリア").apply {
         isEnabled = false
+        font = Font("SansSerif", Font.PLAIN, 13)
+        background = Color(245, 245, 245)
+        foreground = Color(244, 67, 54)
         addActionListener { clearImage() }
     }
+    
+    // 選択された画像ファイル
     private var selectedImageFile: java.io.File? = null
-    private val imagePreviewLabel = JLabel("画像なし").apply {
-        preferredSize = Dimension(100, 100)
-        border = BorderFactory.createLoweredBevelBorder()
+    
+    // 画像プレビューラベル
+    private val imagePreviewLabel = JLabel("📷 画像なし").apply {
+        preferredSize = Dimension(120, 120)
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color(224, 224, 224), 2),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        )
         horizontalAlignment = SwingConstants.CENTER
+        verticalAlignment = SwingConstants.CENTER
+        background = Color(250, 250, 250)
+        foreground = Color(117, 117, 117)
+        font = Font("SansSerif", Font.PLAIN, 12)
+        isOpaque = true
     }
     
     // プロンプトプリセット（軽量版向けに最適化）
@@ -206,18 +237,37 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         selectedIndex = 0
     }
     
-    // モデル状態チェック
-    private val modelStatusLabel = JLabel("モデル状態確認中...").apply {
-        font = Font(Font.SANS_SERIF, Font.ITALIC, 10)
+    // モデル状態表示ラベル
+    private val modelStatusLabel = JLabel("🔍 モデル状態確認中...").apply {
+        foreground = Color(117, 117, 117)
+        font = Font("SansSerif", Font.PLAIN, 12)
+        border = EmptyBorder(5, 10, 5, 10)
     }
     
     private val isProcessing = AtomicBoolean(false)
     private val dateFormat = SimpleDateFormat("yyyyMMddHHmmssSSS")
 
     init {
-        defaultCloseOperation = EXIT_ON_CLOSE
-        preferredSize = Dimension(900, 700)
-
+        title = "🎙️ 音声認識AI アプリケーション v2.1 - 軽量版対応"
+        defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+        preferredSize = Dimension(950, 750) // サイズを少し拡大
+        
+        // 背景色を改善
+        contentPane.background = Color(248, 249, 250)
+        
+        // メインフォントを設定
+        val mainFont = Font("SansSerif", Font.PLAIN, 14)
+        val titleFont = Font("SansSerif", Font.BOLD, 16)
+        
+        // 設定パネル（上部）- より見やすく
+        val settingsPanel = JPanel(GridBagLayout()).apply {
+            background = Color.WHITE
+            border = CompoundBorder(
+                TitledBorder(null, "🔧 設定", TitledBorder.LEFT, TitledBorder.TOP, titleFont, Color(33, 150, 243)),
+                EmptyBorder(15, 20, 15, 20)
+            )
+        }
+        
         // モデル選択パネル
         val modelPanel = JPanel().apply {
             border = BorderFactory.createTitledBorder("AIモデル選択")
@@ -250,15 +300,13 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         }
         
         // 設定パネル（上部）
-        val settingsPanel = JPanel(BorderLayout()).apply {
-            add(modelPanel, BorderLayout.NORTH)
-            add(promptPanel, BorderLayout.CENTER)
-            val bottomPanel = JPanel(BorderLayout()).apply {
-                add(imagePanel, BorderLayout.CENTER)
-                add(statusPanel, BorderLayout.SOUTH)
-            }
-            add(bottomPanel, BorderLayout.SOUTH)
+        val bottomPanel = JPanel(BorderLayout()).apply {
+            add(imagePanel, BorderLayout.CENTER)
+            add(statusPanel, BorderLayout.SOUTH)
         }
+        settingsPanel.add(modelPanel, BorderLayout.NORTH)
+        settingsPanel.add(promptPanel, BorderLayout.CENTER)
+        settingsPanel.add(bottomPanel, BorderLayout.SOUTH)
         
         // モデル選択時の処理
         gemma3Radio.addActionListener {
@@ -399,10 +447,10 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
 
     private fun clearImage() {
         selectedImageFile = null
-        imageButton.text = "画像を選択"
+        imageButton.text = "📷 画像選択"
         imageClearButton.isEnabled = false
         imagePreviewLabel.icon = null
-        imagePreviewLabel.text = "画像なし"
+        imagePreviewLabel.text = "📷 画像なし"
     }
 
     private fun startVoiceDetection() {
@@ -433,12 +481,13 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         SwingUtilities.invokeLater {
             val selectedModel = if (gemma2Radio.isSelected) "gemma2" else if (gemma3Radio.isSelected) "gemma3" else "gemma3_light"
             val modelName = when (selectedModel) {
-                "gemma2" -> "Gemma2 (9B)"
-                "gemma3" -> "Gemma3 (4B)"
-                "gemma3_light" -> "Gemma3:1B (軽量版・高速)"
+                "gemma2" -> "🏆 Gemma2 (9B)"
+                "gemma3" -> "🎨 Gemma3 (4B)"
+                "gemma3_light" -> "⚡ Gemma3:1B (軽量版・高速)"
                 else -> selectedModel
             }
-            statusLabel.text = "音声セグメントをrecorded_audio_${System.currentTimeMillis()}.wavに保存しました．${modelName}でAI処理中..."
+            statusLabel.text = "💾 音声セグメントをrecorded_audio_${System.currentTimeMillis()}.wavに保存しました．${modelName}でAI処理中..."
+            statusLabel.foreground = Color(255, 193, 7) // 処理中は黄色
         }
         
         // デバッグ用：録音ファイルの場所をコンソールのみに表示
@@ -496,7 +545,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                             
                             // 読み上げ完了後にマイク再開
                             SwingUtilities.invokeLater {
-                                statusLabel.text = "マイク準備完了．音声待機中....."
+                                statusLabel.text = "🎤 マイク準備完了．音声待機中....."
                                 isProcessing.set(false)
                                 startVoiceDetection() // 処理完了後にマイクオン
                             }
@@ -506,7 +555,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
                 } catch (e: Exception) {
                     SwingUtilities.invokeLater {
                         showError("処理エラー: ${e.message}")
-                        statusLabel.text = "マイク準備完了．音声待機中....."
+                        statusLabel.text = "🎤 マイク準備完了．音声待機中....."
                         isProcessing.set(false)
                         startVoiceDetection() // エラー時もマイクオン
                     }
