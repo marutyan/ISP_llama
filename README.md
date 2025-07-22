@@ -34,18 +34,37 @@ A sophisticated voice recognition application built with **Compose Multiplatform
 
 ## 🔄 Voice Processing Flow
 
-Simple 4-step voice processing cycle:
+The application follows an optimized voice processing workflow that balances natural conversation with efficient processing:
 
 ```mermaid
 graph LR
-    A[🎤] --> B[🔴] --> C[🧠] --> D[🔊] --> A
-    style A fill:#4CAF50
-    style B fill:#FF9800
-    style C fill:#2196F3
-    style D fill:#9C27B0
+    A["🎤 Standby"] --> B{Voice?}
+    B -->|No| A
+    B -->|Yes| C["🔴 Recording"]
+    C --> D{Silence 1.5s?}
+    D -->|No| C
+    D -->|Yes| E["💾 Save WAV"]
+    E --> F["🧠 AI Processing"]
+    F --> G["📱 Display"]
+    G --> H["🔊 Speech"]
+    H --> I{Stop?}
+    I -->|Yes| A
+    I -->|No| J{Done?}
+    J -->|No| I
+    J -->|Yes| A
+
+    style A fill:#4CAF50,color:#fff
+    style C fill:#FF9800,color:#fff
+    style F fill:#2196F3,color:#fff
+    style H fill:#9C27B0,color:#fff
 ```
 
-**🎤 Standby** → **🔴 Record** → **🧠 Process** → **🔊 Speak** → Loop
+### 🎯 **Flow Features**
+
+- **🎤 Smart Standby**: Unlimited waiting time, instant voice detection
+- **⏱️ Silence Detection**: 1.5s timeout after speech ends
+- **🛑 User Control**: Stop speech synthesis anytime
+- **🔄 Seamless Loop**: Automatic return to standby after processing
 
 ---
 
