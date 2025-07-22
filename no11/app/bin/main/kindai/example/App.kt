@@ -56,6 +56,7 @@ object AppTheme {
 class VoiceDetector(private val onVoiceStart: () -> Unit, private val onVoiceEnd: (File) -> Unit) {
     private val isListening = AtomicBoolean(false)
     private val isRecording = AtomicBoolean(false)
+    private val isSpeaking = AtomicBoolean(false) // AI音声合成中フラグ
     private var targetDataLine: TargetDataLine? = null
     private var audioFile: File? = null
     private var audioOutputStream: AudioInputStream? = null
@@ -72,6 +73,15 @@ class VoiceDetector(private val onVoiceStart: () -> Unit, private val onVoiceEnd
     fun stopListening() {
         isListening.set(false)
         stopRecording()
+    }
+
+    // AI音声合成開始時に呼び出し
+    fun setSpeaking(speaking: Boolean) {
+        isSpeaking.set(speaking)
+        if (speaking && isRecording.get()) {
+            // AI音声合成開始時は録音を停止
+            stopRecording()
+        }
     }
 
     private fun listenForVoice() {
@@ -94,7 +104,8 @@ class VoiceDetector(private val onVoiceStart: () -> Unit, private val onVoiceEnd
                         val rms = calculateRMS(buffer, bytesRead)
                         
                         if (rms > 300) {
-                            if (!isRecording.get()) {
+                            // AI音声合成中は録音を開始しない
+                            if (!isRecording.get() && !isSpeaking.get()) {
                                 startRecording()
                             }
                             silenceCount = 0
@@ -189,6 +200,34 @@ object Http {
     val mapper = jacksonObjectMapper()
 }
 
+// 🔊 音声合成状態管理
+object SpeechManager {
+    private val isSpeaking = AtomicBoolean(false)
+    private var currentDetector: VoiceDetector? = null
+    
+    fun setSpeaking(speaking: Boolean) {
+        isSpeaking.set(speaking)
+        currentDetector?.setSpeaking(speaking)
+    }
+    
+    fun setDetector(detector: VoiceDetector) {
+        currentDetector = detector
+    }
+    
+    fun speakText(text: String) {
+        try {
+            setSpeaking(true)
+            val cleanText = text.replace("\"", "\\\"")
+            val process = ProcessBuilder("say", cleanText).start()
+            process.waitFor()
+            setSpeaking(false)
+        } catch (e: Exception) {
+            println("音声合成エラー: ${e.message}")
+            setSpeaking(false)
+        }
+    }
+}
+
 // 🎯 メインアプリケーション
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -244,8 +283,8 @@ fun VoiceAIApp() {
                             
                             resultText = newResult + resultText
                             
-                            // 音声合成で読み上げ
-                            speakText(aiResponse)
+                            // 音声合成で読み上げ（録音停止制御付き）
+                            SpeechManager.speakText(aiResponse)
                             
                             statusMessage = "🎤 マイク準備完了．音声待機中....."
                             statusColor = AppTheme.Success
@@ -274,6 +313,7 @@ fun VoiceAIApp() {
 
     // アプリ開始時に音声検出を開始
     LaunchedEffect(Unit) {
+        SpeechManager.setDetector(voiceDetector)
         voiceDetector.startListening()
         isListening = true
     }
@@ -779,15 +819,7 @@ fun cleanOllamaResponse(response: String): String {
         .take(1000)
 }
 
-// 🔊 音声合成
-fun speakText(text: String) {
-    try {
-        val cleanText = text.replace("\"", "\\\"")
-        ProcessBuilder("say", cleanText).start()
-    } catch (e: Exception) {
-        println("音声合成エラー: ${e.message}")
-    }
-}
+
 
 // 🚀 メイン関数
 fun main() = application {
