@@ -260,7 +260,7 @@ class AppFrame : JFrame("音声認識&AI応答アプリ") {
         val titleFont = Font("SansSerif", Font.BOLD, 16)
         
         // 設定パネル（上部）- より見やすく
-        val settingsPanel = JPanel(GridBagLayout()).apply {
+        val settingsPanel = JPanel(BorderLayout()).apply {
             background = Color.WHITE
             border = CompoundBorder(
                 TitledBorder(null, "🔧 設定", TitledBorder.LEFT, TitledBorder.TOP, titleFont, Color(33, 150, 243)),
