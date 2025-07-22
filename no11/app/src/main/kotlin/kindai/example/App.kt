@@ -6,6 +6,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.delay
@@ -29,6 +31,8 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.sound.sampled.*
 import kotlin.concurrent.thread
+import java.awt.FileDialog
+import java.awt.Frame
 import java.util.Base64
 
 // 🎨 Material 3 Color Palette
