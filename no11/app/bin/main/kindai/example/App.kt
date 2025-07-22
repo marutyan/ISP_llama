@@ -473,12 +473,16 @@ fun SettingsPanel(
     onSpeechSpeedChange: (Int) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 600.dp), // 最大高さを設定してスクロールを有効化
         colors = CardDefaults.cardColors(containerColor = AppTheme.Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 "🔧 設定",
