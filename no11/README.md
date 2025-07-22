@@ -129,6 +129,68 @@ implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
 
 ---
 
+## 🔄 Voice Processing Flow
+
+The application follows an optimized voice processing workflow that balances natural conversation with efficient processing:
+
+```mermaid
+graph TD
+    A["🎤 Voice Input Start<br/>(Standby State)"] --> B["Audio Level Detection"]
+    B --> C{Audio Level > 1000.0?}
+    C -->|No| D["⏰ Continue Waiting<br/>(Unlimited standby time)"]
+    D --> B
+    C -->|Yes| E["📢 Recording Start<br/>Status: Recording"]
+    E --> F["Audio Data Collection"]
+    F --> G{Audio Level > 1000.0?}
+    G -->|Yes| H["Voice Continues<br/>Reset silence timer"]
+    H --> F
+    G -->|No| I["🔇 Silence Detection Start"]
+    I --> J{Silence Duration > 1.5s?}
+    J -->|No| K{Voice detected again?}
+    K -->|Yes| F
+    K -->|No| I
+    J -->|Yes| L["📁 Recording Complete<br/>Save WAV file"]
+    L --> M["🤖 Speech Recognition"]
+    M --> N["🧠 AI Response Generation"]
+    N --> O["🔊 Text-to-Speech Start<br/>(At configured speed)"]
+    O --> P{Stop Speech Button?}
+    P -->|Yes| Q["⏹️ Stop Text-to-Speech"]
+    P -->|No| R["Continue Speech Synthesis"]
+    R --> S{Speech Complete?}
+    S -->|No| P
+    S -->|Yes| T["🎤 Return to Standby"]
+    Q --> T
+    T --> A
+
+    style A fill:#4CAF50,color:#fff
+    style D fill:#81C784,color:#fff
+    style E fill:#FF9800,color:#fff
+    style I fill:#FFC107,color:#fff
+    style L fill:#2196F3,color:#fff
+    style O fill:#9C27B0,color:#fff
+    style Q fill:#F44336,color:#fff
+    style T fill:#4CAF50,color:#fff
+```
+
+### 🎯 **Key Features of the Flow**
+
+#### **Optimized Waiting Strategy**
+- **Unlimited Standby**: No pressure to start speaking immediately
+- **Instant Detection**: Responds immediately when voice is detected
+- **Smart Silence Handling**: 1.5 seconds after speech starts for efficient processing
+
+#### **Efficient Processing**
+- **Quick Termination**: 1.5s silence detection after speech begins
+- **Immediate Processing**: Fast transition from recording to AI response
+- **User Control**: Stop speech synthesis at any time
+
+#### **Natural Conversation**
+- **No Rush**: Take your time before speaking
+- **Quick Response**: Fast processing once you finish speaking
+- **Full Control**: Interrupt and restart at any point
+
+---
+
 ## 🚀 Installation & Usage
 
 ### 📥 **Requirements**

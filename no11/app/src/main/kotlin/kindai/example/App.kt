@@ -401,20 +401,92 @@ fun VoiceAIApp() {
                     color = AppTheme.SurfaceVariant,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = modelStatus,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AppTheme.OnSurface.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = statusMessage,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = statusColor,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = modelStatus,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppTheme.OnSurface.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = statusMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = statusColor,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        
+                        // 🔊 読み上げ速度調整コントロール
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // 速度ダウンボタン
+                            IconButton(
+                                onClick = { 
+                                    speechSpeed = (speechSpeed - 50).coerceAtLeast(100)
+                                    SpeechManager.setSpeechSpeed(speechSpeed)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Remove,
+                                    contentDescription = "読み上げ速度を下げる",
+                                    tint = AppTheme.Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            
+                            // 現在の速度表示
+                            Text(
+                                "${speechSpeed}wpm",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppTheme.Primary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.width(50.dp),
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            // 速度アップボタン
+                            IconButton(
+                                onClick = { 
+                                    speechSpeed = (speechSpeed + 50).coerceAtMost(400)
+                                    SpeechManager.setSpeechSpeed(speechSpeed)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = "読み上げ速度を上げる",
+                                    tint = AppTheme.Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            
+                            // 読み上げ停止ボタン
+                            IconButton(
+                                onClick = { 
+                                    SpeechManager.stopSpeaking()
+                                    statusMessage = "🎤 マイク準備完了．音声待機中....."
+                                    statusColor = AppTheme.Success
+                                },
+                                enabled = isSpeaking,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    if (isSpeaking) Icons.Filled.Stop else Icons.Filled.VolumeOff,
+                                    contentDescription = "読み上げ停止",
+                                    tint = if (isSpeaking) AppTheme.Error else AppTheme.OnSurface.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
