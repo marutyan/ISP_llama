@@ -39,59 +39,33 @@ The application follows an optimized voice processing workflow that balances nat
 
 ```mermaid
 graph TD
-    A["🎤 Voice Input Start<br/>(Standby State)"] --> B["Audio Level Detection"]
-    B --> C{Audio Level > 1000.0?}
-    C -->|No| D["⏰ Continue Waiting<br/>(Unlimited standby time)"]
-    D --> B
-    C -->|Yes| E["📢 Recording Start<br/>Status: Recording"]
-    E --> F["Audio Data Collection"]
-    F --> G{Audio Level > 1000.0?}
-    G -->|Yes| H["Voice Continues<br/>Reset silence timer"]
-    H --> F
-    G -->|No| I["🔇 Silence Detection Start"]
-    I --> J{Silence Duration > 1.5s?}
-    J -->|No| K{Voice detected again?}
-    K -->|Yes| F
-    K -->|No| I
-    J -->|Yes| L["📁 Recording Complete<br/>Save WAV file"]
-    L --> M["🤖 Speech Recognition"]
-    M --> N["🧠 AI Response Generation"]
-    N --> O["🔊 Text-to-Speech Start<br/>(At configured speed)"]
-    O --> P{Stop Speech Button?}
-    P -->|Yes| Q["⏹️ Stop Text-to-Speech"]
-    P -->|No| R["Continue Speech Synthesis"]
-    R --> S{Speech Complete?}
-    S -->|No| P
-    S -->|Yes| T["🎤 Return to Standby"]
-    Q --> T
-    T --> A
+    A["🎤 Standby"] --> B{Voice?}
+    B -->|No| A
+    B -->|Yes| C["🔴 Recording"]
+    C --> D{Silence 1.5s?}
+    D -->|No| C
+    D -->|Yes| E["💾 Save WAV"]
+    E --> F["🧠 AI Processing"]
+    F --> G["📱 Display"]
+    G --> H["🔊 Speech"]
+    H --> I{Stop?}
+    I -->|Yes| A
+    I -->|No| J{Done?}
+    J -->|No| I
+    J -->|Yes| A
 
     style A fill:#4CAF50,color:#fff
-    style D fill:#81C784,color:#fff
-    style E fill:#FF9800,color:#fff
-    style I fill:#FFC107,color:#fff
-    style L fill:#2196F3,color:#fff
-    style O fill:#9C27B0,color:#fff
-    style Q fill:#F44336,color:#fff
-    style T fill:#4CAF50,color:#fff
+    style C fill:#FF9800,color:#fff
+    style F fill:#2196F3,color:#fff
+    style H fill:#9C27B0,color:#fff
 ```
 
-### 🎯 **Flow Optimization Features**
+### 🎯 **Flow Features**
 
-#### **Smart Waiting Strategy**
-- **Unlimited Initial Standby**: No pressure to start speaking immediately
-- **Instant Voice Detection**: Responds immediately when voice is detected (>1000.0 threshold)
-- **Efficient Post-Speech Processing**: 1.5-second silence detection after speech begins
-
-#### **Intelligent Processing**
-- **Quick Termination**: Fast transition from recording to AI processing
-- **Real-time Feedback**: Live status updates throughout the entire process
-- **User Control**: Ability to interrupt speech synthesis at any point
-
-#### **Natural Conversation Flow**
-- **Relaxed Initial State**: Take your time before speaking
-- **Responsive Processing**: Quick AI response generation once speech ends
-- **Full Interrupt Control**: Stop and restart conversation at any moment
+- **🎤 Smart Standby**: Unlimited waiting time, instant voice detection
+- **⏱️ Silence Detection**: 1.5s timeout after speech ends
+- **🛑 User Control**: Stop speech synthesis anytime
+- **🔄 Seamless Loop**: Automatic return to standby after processing
 
 ---
 
