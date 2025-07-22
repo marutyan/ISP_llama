@@ -643,20 +643,26 @@ fun SettingsContent(
             ModelRadioButton(
                 selected = selectedModel == "gemma2",
                 onClick = { onModelChange("gemma2") },
-                label = "🏆 Gemma2",
-                description = "9B - 高性能"
+                icon = Icons.Filled.Star,
+                title = "Gemma2",
+                subtitle = "9B - 高性能",
+                color = AppTheme.Primary
             )
             ModelRadioButton(
                 selected = selectedModel == "gemma3",
                 onClick = { onModelChange("gemma3") },
-                label = "🎨 Gemma3",
-                description = "4B - マルチモーダル"
+                icon = Icons.Filled.Palette,
+                title = "Gemma3",
+                subtitle = "4B - マルチモーダル",
+                color = AppTheme.Secondary
             )
             ModelRadioButton(
                 selected = selectedModel == "gemma3_light",
                 onClick = { onModelChange("gemma3_light") },
-                label = "⚡ Gemma3:1B",
-                description = "軽量・高速"
+                icon = Icons.Filled.Speed,
+                title = "Gemma3:1B",
+                subtitle = "軽量・高速",
+                color = AppTheme.Success
             )
         }
         
@@ -803,7 +809,7 @@ fun SettingsContent(
                 enabled = isSpeaking,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isSpeaking) AppTheme.Error else AppTheme.Surface,
-                    contentColor = if (isSpeaking) AppTheme.OnError else AppTheme.OnSurface.copy(alpha = 0.3f)
+                    contentColor = if (isSpeaking) Color.White else AppTheme.OnSurface.copy(alpha = 0.3f)
                 )
             ) {
                 Icon(
