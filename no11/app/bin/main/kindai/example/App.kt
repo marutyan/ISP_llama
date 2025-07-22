@@ -3,6 +3,7 @@ package kindai.example
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -269,6 +270,9 @@ fun VoiceAIApp() {
     var isSpeaking by remember { mutableStateOf(false) }
     var speechSpeed by remember { mutableStateOf(SpeechManager.getSpeechSpeed()) }
     
+    // 📋 設定パネル折りたたみ状態
+    var isSettingsPanelExpanded by remember { mutableStateOf(true) }
+    
     // v1.0の音声検出ロジックを使用（objectなのでrememberは不要）
 
     // モデル状態チェック
@@ -497,8 +501,10 @@ fun VoiceAIApp() {
                     .padding(paddingValues)
                     .padding(16.dp)
             ) {
-                // 設定パネル
-                SettingsPanel(
+                // 折りたたみ可能な設定パネル
+                CollapsibleSettingsPanel(
+                    isExpanded = isSettingsPanelExpanded,
+                    onExpandedChange = { isSettingsPanelExpanded = it },
                     selectedModel = selectedModel,
                     onModelChange = { selectedModel = it },
                     customPrompt = customPrompt,
@@ -526,6 +532,324 @@ fun VoiceAIApp() {
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+    }
+}
+
+// 📋 折りたたみ可能な設定パネル
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CollapsibleSettingsPanel(
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    selectedModel: String,
+    onModelChange: (String) -> Unit,
+    customPrompt: String,
+    onPromptChange: (String) -> Unit,
+    selectedImageFile: File?,
+    onImageFileChange: (File?) -> Unit,
+    isSpeaking: Boolean,
+    speechSpeed: Int,
+    onStopSpeaking: () -> Unit,
+    onSpeechSpeedChange: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = AppTheme.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            // ヘッダー（常に表示）
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandedChange(!isExpanded) },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "🔧 設定",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = AppTheme.Primary
+                )
+                
+                Icon(
+                    if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = if (isExpanded) "設定を閉じる" else "設定を開く",
+                    tint = AppTheme.Primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            // 展開可能なコンテンツ
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    // 既存の設定内容をそのまま使用
+                    SettingsContent(
+                        selectedModel = selectedModel,
+                        onModelChange = onModelChange,
+                        customPrompt = customPrompt,
+                        onPromptChange = onPromptChange,
+                        selectedImageFile = selectedImageFile,
+                        onImageFileChange = onImageFileChange,
+                        isSpeaking = isSpeaking,
+                        speechSpeed = speechSpeed,
+                        onStopSpeaking = onStopSpeaking,
+                        onSpeechSpeedChange = onSpeechSpeedChange
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    selectedModel: String,
+    onModelChange: (String) -> Unit,
+    customPrompt: String,
+    onPromptChange: (String) -> Unit,
+    selectedImageFile: File?,
+    onImageFileChange: (File?) -> Unit,
+    isSpeaking: Boolean,
+    speechSpeed: Int,
+    onStopSpeaking: () -> Unit,
+    onSpeechSpeedChange: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState())
+    ) {
+        // モデル選択
+        Text(
+            "AI モデル選択",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+        
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ModelRadioButton(
+                selected = selectedModel == "gemma2",
+                onClick = { onModelChange("gemma2") },
+                label = "🏆 Gemma2",
+                description = "9B - 高性能"
+            )
+            ModelRadioButton(
+                selected = selectedModel == "gemma3",
+                onClick = { onModelChange("gemma3") },
+                label = "🎨 Gemma3",
+                description = "4B - マルチモーダル"
+            )
+            ModelRadioButton(
+                selected = selectedModel == "gemma3_light",
+                onClick = { onModelChange("gemma3_light") },
+                label = "⚡ Gemma3:1B",
+                description = "軽量・高速"
+            )
+        }
+        
+        Spacer(Modifier.height(20.dp))
+        
+        // プロンプト設定
+        Text(
+            "📝 プロンプト設定",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+        
+        var expanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = customPrompt,
+                onValueChange = onPromptChange,
+                label = { Text("カスタムプロンプト") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                listOf(
+                    "日本語で答えてください。",
+                    "簡潔に答えてください。",
+                    "詳しく説明してください。",
+                    "専門的な用語を使って説明してください。",
+                    "初心者にもわかりやすく説明してください。"
+                ).forEach { prompt ->
+                    DropdownMenuItem(
+                        text = { Text(prompt) },
+                        onClick = {
+                            onPromptChange(prompt)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+        
+        Spacer(Modifier.height(20.dp))
+        
+        // 画像アップロード（Gemma3のみ）
+        if (selectedModel == "gemma3" || selectedModel == "gemma3_light") {
+            Text(
+                "🖼️ 画像アップロード（マルチモーダル）",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(8.dp))
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = {
+                        val fileDialog = java.awt.FileDialog(null as java.awt.Frame?, "画像を選択", java.awt.FileDialog.LOAD)
+                        fileDialog.setFilenameFilter { _, name -> 
+                            name.lowercase().endsWith(".png") || 
+                            name.lowercase().endsWith(".jpg") || 
+                            name.lowercase().endsWith(".jpeg")
+                        }
+                        fileDialog.isVisible = true
+                        if (fileDialog.file != null) {
+                            onImageFileChange(File(fileDialog.directory + fileDialog.file))
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppTheme.Primary,
+                        contentColor = AppTheme.OnPrimary
+                    )
+                ) {
+                    Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("画像選択")
+                }
+                
+                if (selectedImageFile != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = AppTheme.Success.copy(alpha = 0.1f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Image,
+                                contentDescription = null,
+                                tint = AppTheme.Success,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                selectedImageFile!!.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppTheme.Success
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { onImageFileChange(null) },
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "画像を削除",
+                                    tint = AppTheme.Error,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Spacer(Modifier.height(20.dp))
+        }
+        
+        // 🔊 音声合成設定
+        Text(
+            "🔊 音声合成設定",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = onStopSpeaking,
+                enabled = isSpeaking,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSpeaking) AppTheme.Error else AppTheme.Surface,
+                    contentColor = if (isSpeaking) AppTheme.OnError else AppTheme.OnSurface.copy(alpha = 0.3f)
+                )
+            ) {
+                Icon(
+                    if (isSpeaking) Icons.Filled.Stop else Icons.Filled.VolumeOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("読み上げ停止")
+            }
+            
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSpeaking) AppTheme.Error.copy(alpha = 0.1f) else AppTheme.Success.copy(alpha = 0.1f)
+                )
+            ) {
+                Text(
+                    if (isSpeaking) "読み上げ中" else "録音可能",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSpeaking) AppTheme.Error else AppTheme.Success,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // 読み上げ速度調整
+        Column {
+            Text(
+                "読み上げ速度: ${speechSpeed} wpm",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(4.dp))
+            Slider(
+                value = speechSpeed.toFloat(),
+                onValueChange = { onSpeechSpeedChange(it.toInt()) },
+                valueRange = 100f..400f,
+                steps = 5,
+                colors = SliderDefaults.colors(
+                    thumbColor = AppTheme.Primary,
+                    activeTrackColor = AppTheme.Primary
+                )
+            )
         }
     }
 }
