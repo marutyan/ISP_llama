@@ -1,0 +1,23 @@
+# 録音ファイル
+*.wav
+app/recorded_audio_*.wav
+app/app/recorded_audio_*.wav
+
+# ビルド成果物
+build/
+.gradle/
+gradle-wrapper.jar
+gradle-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ログファイル
+*.log 
