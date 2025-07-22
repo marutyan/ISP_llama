@@ -65,7 +65,7 @@ object VoiceDetector {
     
     // 音声検出の閾値設定（v1.0の値を使用）
     private val SILENCE_THRESHOLD = 1000.0  // 音声検出の閾値（適度な感度に調整）
-    private val SILENCE_DURATION = 3000    // 無音が続く時間(ms)（3秒に延長）
+    private val SILENCE_DURATION_AFTER_SPEECH = 1500    // 録音開始後の無音時間(ms)（1.5秒）
     private val MIN_RECORDING_DURATION = 1500 // 最小録音時間(ms)（1.5秒に延長）
     
     fun startListening(
@@ -142,7 +142,7 @@ object VoiceDetector {
                             if (isRecording.get()) {
                                 audioBuffer.write(buffer, 0, bytesRead)
                                 
-                                if (currentTime - silenceStart > SILENCE_DURATION &&
+                                if (currentTime - silenceStart > SILENCE_DURATION_AFTER_SPEECH &&
                                     currentTime - recordingStart > MIN_RECORDING_DURATION) {
                                     // 録音終了
                                     isRecording.set(false)
