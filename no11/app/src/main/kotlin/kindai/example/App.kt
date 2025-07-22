@@ -52,141 +52,144 @@ object AppTheme {
     val Error = Color(0xFFF44336)
 }
 
-// 🎤 音声検出クラス
-class VoiceDetector(private val onVoiceStart: () -> Unit, private val onVoiceEnd: (File) -> Unit) {
+/* ─────────────────────── v1.0の音声検出・録音ロジック ─────────────────────── */
+object VoiceDetector {
+    private val fmt = AudioFormat(16_000f, 16, 1, true, false)
+    private var line: TargetDataLine? = null
     private val isListening = AtomicBoolean(false)
     private val isRecording = AtomicBoolean(false)
     private val isSpeaking = AtomicBoolean(false) // AI音声合成中フラグ
-    private var targetDataLine: TargetDataLine? = null
-    private var audioFile: File? = null
-    private var audioOutputStream: AudioInputStream? = null
-
-    fun startListening() {
+    private var listenerThread: Thread? = null
+    private val dateFormat = java.text.SimpleDateFormat("yyyyMMddHHmmssSSS")
+    
+    // 音声検出の閾値設定（v1.0の値を使用）
+    private val SILENCE_THRESHOLD = 1000.0  // 音声検出の閾値（適度な感度に調整）
+    private val SILENCE_DURATION = 1500    // 無音が続く時間(ms)（少し短めに調整）
+    private val MIN_RECORDING_DURATION = 1500 // 最小録音時間(ms)（1.5秒に延長）
+    
+    fun startListening(
+        onVoiceDetected: () -> Unit,
+        onVoiceEnded: (File) -> Unit,
+        onError: (String) -> Unit
+    ) {
         if (isListening.get()) return
-        isListening.set(true)
         
-        thread {
-            listenForVoice()
+        val info = DataLine.Info(TargetDataLine::class.java, fmt)
+        if (!AudioSystem.isLineSupported(info)) {
+            onError("マイクが16 kHzに非対応")
+            return
+        }
+        
+        try {
+            line = AudioSystem.getLine(info) as TargetDataLine
+            line!!.open(fmt)
+            line!!.start()
+            isListening.set(true)
+            
+            listenerThread = thread {
+                listenForVoice(onVoiceDetected, onVoiceEnded, onError)
+            }
+        } catch (e: Exception) {
+            onError("マイク初期化エラー: ${e.message}")
         }
     }
-
+    
     fun stopListening() {
         isListening.set(false)
-        stopRecording()
+        isRecording.set(false)
+        line?.apply { stop(); close() }
+        listenerThread?.interrupt()
     }
 
     // AI音声合成開始時に呼び出し
     fun setSpeaking(speaking: Boolean) {
         isSpeaking.set(speaking)
-        if (speaking && isRecording.get()) {
-            // AI音声合成開始時は録音を停止
-            stopRecording()
-        }
     }
-
-    private fun listenForVoice() {
-        val format = AudioFormat(16000f, 16, 1, true, false)
-        val info = DataLine.Info(TargetDataLine::class.java, format)
+    
+    private fun listenForVoice(
+        onVoiceDetected: () -> Unit,
+        onVoiceEnded: (File) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val buffer = ByteArray(1024)
+        val audioBuffer = ByteArrayOutputStream()
+        var silenceStart = 0L
+        var recordingStart = 0L
         
         try {
-            targetDataLine = AudioSystem.getLine(info) as TargetDataLine
-            targetDataLine?.open(format)
-            targetDataLine?.start()
-
-            val buffer = ByteArray(1024)
-            var silenceCount = 0
-            val silenceThreshold = 30
-
-            while (isListening.get()) {
+            while (isListening.get() && !Thread.currentThread().isInterrupted) {
                 try {
-                    val bytesRead = targetDataLine?.read(buffer, 0, buffer.size) ?: 0
+                    val bytesRead = line!!.read(buffer, 0, buffer.size)
                     if (bytesRead > 0) {
-                        val rms = calculateRMS(buffer, bytesRead)
+                        val volume = calculateVolume(buffer, bytesRead)
+                        val currentTime = System.currentTimeMillis()
                         
-                        if (rms > 300) {
-                            // AI音声合成中は録音を開始しない
+                        if (volume > SILENCE_THRESHOLD) {
+                            // 音声検出（AI音声合成中は録音開始しない）
                             if (!isRecording.get() && !isSpeaking.get()) {
-                                startRecording()
+                                isRecording.set(true)
+                                recordingStart = currentTime
+                                audioBuffer.reset()
+                                onVoiceDetected()
                             }
-                            silenceCount = 0
+                            silenceStart = currentTime
+                            if (isRecording.get()) {
+                                audioBuffer.write(buffer, 0, bytesRead)
+                            }
                         } else {
-                            silenceCount++
-                            if (isRecording.get() && silenceCount > silenceThreshold) {
-                                stopRecording()
+                            // 無音
+                            if (isRecording.get()) {
+                                audioBuffer.write(buffer, 0, bytesRead)
+                                
+                                if (currentTime - silenceStart > SILENCE_DURATION &&
+                                    currentTime - recordingStart > MIN_RECORDING_DURATION) {
+                                    // 録音終了
+                                    isRecording.set(false)
+                                    val audioData = audioBuffer.toByteArray()
+                                    
+                                    // WAVファイルに保存
+                                    val timestamp = dateFormat.format(java.util.Date())
+                                    val wavFile = File("app/recorded_audio_$timestamp.wav")
+                                    saveAsWav(audioData, wavFile)
+                                    
+                                    onVoiceEnded(wavFile)
+                                }
                             }
                         }
                     }
-                    Thread.sleep(50)
+                    Thread.sleep(10) // CPU負荷軽減
                 } catch (e: InterruptedException) {
+                    // スレッドが割り込まれた場合は正常終了
                     break
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            targetDataLine?.close()
-        }
-    }
-
-    private fun calculateRMS(buffer: ByteArray, bytesRead: Int): Double {
-        var sum = 0.0
-        for (i in 0 until bytesRead step 2) {
-            val sample = ((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 0xFF)).toShort()
-            sum += sample * sample
-        }
-        return kotlin.math.sqrt(sum / (bytesRead / 2))
-    }
-
-    private fun startRecording() {
-        if (isRecording.get()) return
-        isRecording.set(true)
-        onVoiceStart()
-        
-        thread {
-            try {
-                val format = AudioFormat(16000f, 16, 1, true, false)
-                audioFile = File("recorded_audio_${System.currentTimeMillis()}.wav")
-                
-                val info = DataLine.Info(TargetDataLine::class.java, format)
-                val recordLine = AudioSystem.getLine(info) as TargetDataLine
-                recordLine.open(format)
-                recordLine.start()
-
-                val audioData = mutableListOf<Byte>()
-                val buffer = ByteArray(1024)
-
-                while (isRecording.get()) {
-                    val bytesRead = recordLine.read(buffer, 0, buffer.size)
-                    if (bytesRead > 0) {
-                        audioData.addAll(buffer.take(bytesRead))
-                    }
-                }
-
-                recordLine.close()
-                
-                audioFile?.let { file ->
-                    val audioBytes = audioData.toByteArray()
-                    val audioInputStream = AudioInputStream(
-                        ByteArrayInputStream(audioBytes),
-                        format,
-                        audioBytes.size.toLong() / format.frameSize
-                    )
-                    AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, file)
-                    println("録音ファイル保存場所: ${file.absolutePath}")
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            if (!Thread.currentThread().isInterrupted) {
+                onError("音声検出エラー: ${e.message}")
             }
         }
     }
-
-    private fun stopRecording() {
-        if (!isRecording.get()) return
-        isRecording.set(false)
-        
-        audioFile?.let { file ->
-            onVoiceEnd(file)
+    
+    private fun calculateVolume(buffer: ByteArray, length: Int): Double {
+        var sum = 0.0
+        for (i in 0 until length step 2) {
+            if (i + 1 < length) {
+                val sample = ((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 0xFF)).toShort()
+                sum += sample * sample
+            }
         }
+        return Math.sqrt(sum / (length / 2))
+    }
+
+    private fun saveAsWav(audioData: ByteArray, file: File) {
+        file.parentFile?.mkdirs()
+        val audioInputStream = AudioInputStream(
+            ByteArrayInputStream(audioData),
+            fmt,
+            audioData.size / fmt.frameSize.toLong()
+        )
+        AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, file)
+        println("録音ファイル保存場所: ${file.absolutePath}")
     }
 }
 
@@ -242,13 +245,27 @@ fun VoiceAIApp() {
     var selectedImageFile by remember { mutableStateOf<File?>(null) }
     var modelStatus by remember { mutableStateOf("🔍 モデル状態確認中...") }
     
-    val voiceDetector = remember {
-        VoiceDetector(
-            onVoiceStart = {
+    // v1.0の音声検出ロジックを使用（objectなのでrememberは不要）
+
+    // モデル状態チェック
+    LaunchedEffect(selectedModel) {
+        modelStatus = "🔍 ${getModelDisplayName(selectedModel)} 状態確認中..."
+        val isAvailable = checkModelStatus(selectedModel)
+        modelStatus = if (isAvailable) {
+            "✅ ${getModelDisplayName(selectedModel)} 利用可能"
+        } else {
+            "❌ ${getModelDisplayName(selectedModel)} 利用不可"
+        }
+    }
+
+    // アプリ開始時に音声検出を開始（v1.0ロジック適用）
+    LaunchedEffect(Unit) {
+        VoiceDetector.startListening(
+            onVoiceDetected = {
                 statusMessage = "🎙️ 録音中"
                 statusColor = AppTheme.Warning
             },
-            onVoiceEnd = { audioFile ->
+            onVoiceEnded = { audioFile ->
                 if (!isProcessing) {
                     isProcessing = true
                     statusMessage = "💾 音声セグメントを${audioFile.name}に保存しました．AI処理中..."
@@ -296,25 +313,12 @@ fun VoiceAIApp() {
                         }
                     }
                 }
+            },
+            onError = { error ->
+                statusMessage = "❌ 音声検出エラー: $error"
+                statusColor = AppTheme.Error
             }
         )
-    }
-
-    // モデル状態チェック
-    LaunchedEffect(selectedModel) {
-        modelStatus = "🔍 ${getModelDisplayName(selectedModel)} 状態確認中..."
-        val isAvailable = checkModelStatus(selectedModel)
-        modelStatus = if (isAvailable) {
-            "✅ ${getModelDisplayName(selectedModel)} 利用可能"
-        } else {
-            "❌ ${getModelDisplayName(selectedModel)} 利用不可"
-        }
-    }
-
-    // アプリ開始時に音声検出を開始
-    LaunchedEffect(Unit) {
-        SpeechManager.setDetector(voiceDetector)
-        voiceDetector.startListening()
         isListening = true
     }
 
@@ -824,7 +828,10 @@ fun cleanOllamaResponse(response: String): String {
 // 🚀 メイン関数
 fun main() = application {
     Window(
-        onCloseRequest = ::exitApplication,
+        onCloseRequest = {
+            VoiceDetector.stopListening() // 音声検出を停止
+            exitApplication()
+        },
         title = "🎙️ 音声認識AI アプリケーション v2.0 - Modern UI",
         state = WindowState(width = 1000.dp, height = 800.dp)
     ) {
