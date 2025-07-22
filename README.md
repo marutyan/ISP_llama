@@ -5,7 +5,6 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-7F52FF?logo=kotlin)](https://kotlinlang.org/)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose-1.6.2-4285F4?logo=jetpackcompose)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Material Design 3](https://img.shields.io/badge/Material%20Design-3-673AB7)](https://m3.material.io/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A sophisticated voice recognition application built with **Compose Multiplatform** that seamlessly integrates speech recognition, AI response generation, and text-to-speech synthesis. Features a modern Material Design 3 interface with collapsible settings panel for optimal user experience.
 
@@ -69,46 +68,6 @@ graph TD
 
 ---
 
-## 🎛️ Collapsible Settings Panel
-
-### 📋 **Panel Features**
-The revolutionary collapsible settings panel maximizes your output viewing area while keeping all controls easily accessible.
-
-#### **Expanded State**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 🔧 Settings                                                  ⌄ │ ← Click to collapse
-├─────────────────────────────────────────────────────────────────┤
-│ 🤖 AI Model Selection                                           │
-│   🏆 Gemma2 (9B)    🎨 Gemma3 (4B)    ⚡ Gemma3:1B (815MB)    │
-│                                                                 │
-│ 📝 Prompt Configuration                                         │
-│   [Custom Prompt Dropdown ▼]                                   │
-│                                                                 │
-│ 🖼️ Image Upload (Gemma3 only)                                  │
-│   [Choose File] selected_image.png [×]                         │
-│                                                                 │
-│ 🔊 Speech Synthesis Controls                                    │
-│   [Stop Speech] [Recording Available]                          │
-│   Speech Speed: 200 wpm [────●────]                            │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-#### **Collapsed State**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 🔧 Settings                                                  ⌃ │ ← Click to expand
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### ⚡ **Benefits**
-- **Maximized Output Area**: Up to 70% more space for AI responses
-- **One-Click Toggle**: Instant expand/collapse with smooth animations
-- **Persistent State**: Settings remain configured when collapsed
-- **Mobile-Friendly**: Optimized for smaller screens and touch interfaces
-
----
-
 ## 🤖 AI Model Support
 
 ### 📊 **Available Models**
@@ -124,32 +83,6 @@ When using Gemma3 models, you can:
 - **Upload Images**: PNG, JPG, JPEG formats supported
 - **Visual Analysis**: Ask questions about uploaded images
 - **Combined Processing**: Text + image context for comprehensive responses
-
----
-
-## 🎨 User Interface
-
-### 🎭 **Material Design 3 Theme**
-- **Primary Color**: `#6750A4` - Elegant purple
-- **Surface Cards**: Elevated design with shadows
-- **Typography**: Hierarchical text design
-- **Consistent Spacing**: 8dp grid system
-
-### 🎛️ **Status Bar Controls**
-Located at the bottom of the application:
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ ✅ Gemma3:1B Available        [-][200wpm][+][⏹]               │
-│ 🎤 Microphone ready. Waiting for voice input...                │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-#### **Control Functions**
-- **[-]**: Decrease speech speed by 50 wpm (minimum 100 wpm)
-- **[200wpm]**: Current speech speed display
-- **[+]**: Increase speech speed by 50 wpm (maximum 400 wpm)
-- **[⏹]**: Stop current speech synthesis (enabled during playback)
-
 ---
 
 ## 🚀 Installation & Setup
@@ -269,103 +202,8 @@ implementation("androidx.compose.animation:animation:1.6.2")
 
 ---
 
-## 🧪 Testing & Quality
-
-### ✅ **Tested Features**
-- ✅ Voice detection accuracy
-- ✅ AI model switching
-- ✅ Multimodal image processing
-- ✅ Settings panel collapse/expand
-- ✅ Speech synthesis controls
-- ✅ Real-time status updates
-- ✅ Error handling and recovery
-
-### 📊 **Performance Metrics**
-| Feature | Response Time | Resource Usage |
-|---------|---------------|----------------|
-| Voice Detection | <100ms | Low CPU |
-| Settings Toggle | <200ms | Minimal |
-| Model Switching | 2-5s | GPU Memory |
-| Speech Synthesis | Real-time | Low CPU |
-
----
-
-## 🔄 Version History
-
-### 🏷️ **v2.0.0 - Collapsible Settings Panel** (Current)
-- ✨ **NEW**: Collapsible settings panel with smooth animations
-- ✨ **NEW**: Status bar speech controls (speed adjustment, stop button)
-- ✨ **NEW**: English documentation with comprehensive flowchart
-- 🎨 **IMPROVED**: Material Design 3 implementation
-- 🐛 **FIXED**: ModelRadioButton parameter compatibility
-- 🐛 **FIXED**: Speech synthesis interruption handling
-
-### 🏷️ **v1.9.0 - Modern UI Foundation**
-- ✨ **NEW**: Complete migration to Compose Multiplatform
-- ✨ **NEW**: Material Design 3 theme implementation
-- ✨ **NEW**: Multimodal support for Gemma3 models
-- 🎨 **IMPROVED**: Voice detection logic optimization
-- 🎨 **IMPROVED**: Speech synthesis speed controls
-
-### 🏷️ **v1.0.0 - Initial Swing Implementation**
-- ✨ Basic voice recognition and AI response
-- ✨ Swing-based user interface
-- ✨ Single model support (Gemma2)
-
----
-
-## 🤝 Contributing
-
-### 🛠️ **Development Setup**
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
-
-### 📝 **Code Style**
-- Follow Kotlin coding conventions
-- Use meaningful variable names
-- Add documentation for public functions
-- Maintain consistent indentation (4 spaces)
-
-### 🐛 **Bug Reports**
-Please include:
-- Operating system and version
-- Java/Kotlin version
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots (if applicable)
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **JetBrains** - For Compose Multiplatform framework
-- **Google** - For Material Design 3 specifications
-- **Ollama Team** - For local LLM server technology
-- **Kotlin Community** - For excellent language support
-
----
-
-## 📞 Support
-
-- 🐛 **Issues**: [GitHub Issues](https://github.com/marutyan/ISP_llama/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/marutyan/ISP_llama/discussions)
-- 📧 **Contact**: Open an issue for direct contact
-
----
-
 <div align="center">
 
 **Built with ❤️ using Kotlin and Compose Multiplatform**
-
-[⭐ Star this project](https://github.com/marutyan/ISP_llama) • [🔀 Fork](https://github.com/marutyan/ISP_llama/fork) • [📥 Download](https://github.com/marutyan/ISP_llama/releases)
 
 </div> 
