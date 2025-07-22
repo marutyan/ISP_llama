@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.delay
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -206,27 +207,46 @@ object Http {
 // 🔊 音声合成状態管理
 object SpeechManager {
     private val isSpeaking = AtomicBoolean(false)
-    private var currentDetector: VoiceDetector? = null
+    private var currentProcess: Process? = null
+    private var speechSpeed: Int = 200 // デフォルト速度（words per minute）
     
     fun setSpeaking(speaking: Boolean) {
         isSpeaking.set(speaking)
-        currentDetector?.setSpeaking(speaking)
+        VoiceDetector.setSpeaking(speaking)
     }
     
-    fun setDetector(detector: VoiceDetector) {
-        currentDetector = detector
+    fun isSpeaking(): Boolean = isSpeaking.get()
+    
+    fun setSpeechSpeed(speed: Int) {
+        speechSpeed = speed.coerceIn(100, 400) // 100-400 wpm の範囲に制限
+    }
+    
+    fun getSpeechSpeed(): Int = speechSpeed
+    
+    fun stopSpeaking() {
+        currentProcess?.let { process ->
+            if (process.isAlive) {
+                process.destroyForcibly()
+                println("音声合成を強制停止しました")
+            }
+        }
+        setSpeaking(false)
     }
     
     fun speakText(text: String) {
         try {
             setSpeaking(true)
             val cleanText = text.replace("\"", "\\\"")
-            val process = ProcessBuilder("say", cleanText).start()
+            // macOSのsayコマンドに速度パラメータを追加
+            val process = ProcessBuilder("say", "-r", speechSpeed.toString(), cleanText).start()
+            currentProcess = process
             process.waitFor()
             setSpeaking(false)
         } catch (e: Exception) {
             println("音声合成エラー: ${e.message}")
             setSpeaking(false)
+        } finally {
+            currentProcess = null
         }
     }
 }
@@ -245,6 +265,10 @@ fun VoiceAIApp() {
     var selectedImageFile by remember { mutableStateOf<File?>(null) }
     var modelStatus by remember { mutableStateOf("🔍 モデル状態確認中...") }
     
+    // 🔊 音声合成関連のstate
+    var isSpeaking by remember { mutableStateOf(false) }
+    var speechSpeed by remember { mutableStateOf(SpeechManager.getSpeechSpeed()) }
+    
     // v1.0の音声検出ロジックを使用（objectなのでrememberは不要）
 
     // モデル状態チェック
@@ -255,6 +279,14 @@ fun VoiceAIApp() {
             "✅ ${getModelDisplayName(selectedModel)} 利用可能"
         } else {
             "❌ ${getModelDisplayName(selectedModel)} 利用不可"
+        }
+    }
+
+    // 音声合成状態の監視
+    LaunchedEffect(Unit) {
+        while (true) {
+            isSpeaking = SpeechManager.isSpeaking()
+            delay(100) // 100ms間隔で状態をチェック
         }
     }
 
@@ -400,7 +432,18 @@ fun VoiceAIApp() {
                     customPrompt = customPrompt,
                     onPromptChange = { customPrompt = it },
                     selectedImageFile = selectedImageFile,
-                    onImageFileChange = { selectedImageFile = it }
+                    onImageFileChange = { selectedImageFile = it },
+                    isSpeaking = isSpeaking,
+                    speechSpeed = speechSpeed,
+                    onStopSpeaking = { 
+                        SpeechManager.stopSpeaking()
+                        statusMessage = "🎤 マイク準備完了．音声待機中....."
+                        statusColor = AppTheme.Success
+                    },
+                    onSpeechSpeedChange = { 
+                        speechSpeed = it
+                        SpeechManager.setSpeechSpeed(it)
+                    }
                 )
                 
                 Spacer(Modifier.height(16.dp))
@@ -423,7 +466,11 @@ fun SettingsPanel(
     customPrompt: String,
     onPromptChange: (String) -> Unit,
     selectedImageFile: File?,
-    onImageFileChange: (File?) -> Unit
+    onImageFileChange: (File?) -> Unit,
+    isSpeaking: Boolean,
+    speechSpeed: Int,
+    onStopSpeaking: () -> Unit,
+    onSpeechSpeedChange: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -579,6 +626,128 @@ fun SettingsPanel(
                             "📷 ${selectedImageFile.name}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = AppTheme.Success
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(20.dp))
+                
+                // 🔊 音声合成コントロール
+                Text(
+                    "🔊 音声合成設定",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(12.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 読み上げ停止ボタン
+                    Button(
+                        onClick = onStopSpeaking,
+                        enabled = isSpeaking,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSpeaking) AppTheme.Error else AppTheme.Error.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            if (isSpeaking) Icons.Filled.Stop else Icons.Filled.VolumeOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            if (isSpeaking) "読み上げ停止" else "読み上げ停止",
+                            fontSize = 14.sp
+                        )
+                    }
+                    
+                    // 読み上げ状態表示
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSpeaking) AppTheme.Warning.copy(alpha = 0.1f) else AppTheme.Success.copy(alpha = 0.1f)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                if (isSpeaking) Icons.Filled.RecordVoiceOver else Icons.Filled.Mic,
+                                contentDescription = null,
+                                tint = if (isSpeaking) AppTheme.Warning else AppTheme.Success,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                if (isSpeaking) "読み上げ中" else "録音可能",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isSpeaking) AppTheme.Warning else AppTheme.Success,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(12.dp))
+                
+                // 読み上げ速度調整
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "読み上げ速度",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "${speechSpeed} wpm",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AppTheme.Primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    Slider(
+                        value = speechSpeed.toFloat(),
+                        onValueChange = { onSpeechSpeedChange(it.toInt()) },
+                        valueRange = 100f..400f,
+                        steps = 29, // 100から400まで10刻み
+                        colors = SliderDefaults.colors(
+                            thumbColor = AppTheme.Primary,
+                            activeTrackColor = AppTheme.Primary,
+                            inactiveTrackColor = AppTheme.Primary.copy(alpha = 0.3f)
+                        )
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "遅い (100)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppTheme.OnSurface.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            "普通 (200)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppTheme.OnSurface.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            "速い (400)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppTheme.OnSurface.copy(alpha = 0.6f)
                         )
                     }
                 }
